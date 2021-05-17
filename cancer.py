@@ -118,7 +118,72 @@ X_train, X_test, Y_train, Y_test = train_test_split(x,y,test_size = test_size,ra
 
 scaler = StandardScaler()
 X_train = scaler.fit_transform(X_train)
-X_test = scaler.ransform(X_test)
+X_test = scaler.transform(X_test)
+
+X_train_df = pd.DataFrame(X_train, columns = columns)
+X_train_df_describe = X_train_df.describe()
+X_train_df["target"] = Y_train
+
+# box plot
+data_melted = pd.melt(X_train_df, id_vars="target",
+                      var_name="features",
+                      value_name="value")
+
+plt.figure()
+sns.boxplot(x="features", y="value", hue="target", data = data_melted)
+plt.xticks(rotation=90)
+plt.show()
+
+#pair plot
+sns.pairplot(X_train_df[corr_features],diag_kind="kde",markers="+", hue = "target")
+plt.show()
+
+# %% Basic KNN Method
+knn = KNeighborsClassifier(n_neighbors=2)
+knn.fit(X_train, Y_train)
+y_pred = knn.predict(X_test)
+cm = confusion_matrix(Y_test, y_pred)
+acc = accuracy_score(Y_test, y_pred)
+score = knn.score(X_test, Y_test)
+print("Score: ",score)
+print("CM: ",cm)
+print("Basic KNN Acc: ",acc)
+
+# %% choose best parameters
+def KNN_Best_Params(x_train, x_test, y_train, y_test):
+    
+    k_range = list(range(1,31))
+    weight_options = ["uniform","distance"]
+    print()
+    param_grid = dict(n_neighbors = k_range, weights = weight_options)
+    
+    knn = KNeighborsClassifier()
+    grid = GridSearchCV(knn, param_grid,cv=10,scoring = "accuracy")
+    grid.fit(x_train, y_train)
+    
+    print("Best training score: {} with parameters: {}".format(grid.best_score_,grid.best_params_))
+    print()    
+    
+    knn = KNeighborsClassifier(**grid.best_params_)
+    knn.fit(x_train,y_train)
+    
+    y_pred_test = knn.predict(x_test)
+    y_pred_train = knn.predict(x_train)
+    
+    cm_test = confusion_matrix(y_test, y_pred_test)
+    cm_train = confusion_matrix(y_train, y_pred_train)
+    
+    acc_test = accuracy_score(y_test,y_pred_test)
+    acc_train = accuracy_score(y_train,y_pred_train)
+    print("Test Score: {}, Train Score: {}".format(acc_test,acc_train))
+    print()
+    print("CM Test: ",cm_test)
+    print("CM Train: ",cm_train)
+    
+    return grid
+
+grid = KNN_Best_Params(X_train, X_test, Y_train, Y_test)
+
 
 
 
